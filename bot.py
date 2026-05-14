@@ -6,7 +6,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 import yt_dlp
 
 # --- پێزانینێن بوتێ ---
-TOKEN = "8933985744:AAETq8QY3O1RkvHYJSz_Gx27cKWKBfvB29I"
+TOKEN = "8653100665:AAENWuUmSpHex5cckLycNmyoDIDwjGdMGgII"
 CHANNEL_URL = "https://t.me/tech_ai_falah"
 CHANNEL_ID = "@tech_ai_falah" 
 

@@ -23,6 +23,7 @@ async def is_subscribed(user_id, context):
 # فەرمانا /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.effective_user.first_name
+    
     keyboard = [
         [InlineKeyboardButton("Channel 📢", url=CHANNEL_URL)],
         [InlineKeyboardButton("من جوین کر ✅", callback_data='check_sub')]
@@ -30,11 +31,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
-        f"سڵاو {user_name}، بەخێرهاتی بۆ بوتێ داونلودەر.\n\n"
-        "دەتوانی ڤیدیۆ لەم بەرنامانە داونلود بکەی:\n"
-        "✅ YouTube, TikTok, Instagram, Facebook\n"
-        "✅ Twitter (X), Pinterest, Snapchat (Public)\n\n"
-        "تکایە سەرەتا جۆین بە بۆ کارکردنی بوتەکە.",
+        f"تو خێرهاتی {user_name}، پێدویستە ل دەستپێکێ کەناڵێ مە جوین ببی دا بشێی هەر ڤیدیۆیەکا تە ڤێت داونلود بکەی.",
         reply_markup=reply_markup
     )
 
@@ -45,31 +42,26 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     if await is_subscribed(user_id, context):
-        await query.edit_message_text("تۆ سەرکەوتی! 🎉 نوکە هەر لینکەکێ هەبیت بفرێژە بۆ داونلودێ.")
+        await query.edit_message_text(
+            "تو سەرکەفتی! 🎉\n\nهر ڤیدیۆیەکا تە هەبیت لینکی فڕێکە، پەیجێ Tech Ai دێ بۆ تە داونلود کەت."
+        )
     else:
-        await query.message.reply_text("تۆ هێشتا نەبوویە ئەندام! تکایە سەرەتا جوین بکە.")
+        await query.message.reply_text("تۆ هێشتا نەبوویە ئەندام! تکایە سەرەتا جوین بکە پاشان کلیک ل 'من جوین کر' بکە.")
 
-# فەنکشنا داونلودێ (گشتگیر بۆ هەموو سایتەکان)
-def download_video_sync(url, user_id):
+# فەنکشنا داونلودێ
+async def download_video(url, user_id):
     output_filename = f"video_{user_id}.mp4"
     ydl_opts = {
         'format': 'best',
         'outtmpl': output_filename,
         'quiet': True,
         'no_warnings': True,
-        # زیادکردنی ناسێنەر بۆ ئەوەی سایتەکان بوتەکە بلۆک نەکەن
-        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'ignoreerrors': True,
     }
-    
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            if info is None:
-                return None
-            return output_filename
-    except Exception as e:
-        logging.error(f"Download Error: {e}")
+            ydl.download([url])
+        return output_filename
+    except:
         return None
 
 # وەرگرتنا لینکان
@@ -85,25 +77,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     status_msg = await update.message.reply_text("خەریکە ڤیدیۆیێ ئامادە دکەم... ⏳")
     
-    # بەکارهێنانی executor بۆ ئەوەی بوتەکە نەوەستێت (Async Download)
-    loop = asyncio.get_event_loop()
-    video_path = await loop.run_in_executor(None, download_video_sync, url, user_id)
+    video_path = await download_video(url, user_id)
     
     if video_path and os.path.exists(video_path):
         try:
             with open(video_path, 'rb') as video_file:
-                await update.message.reply_video(
-                    video=video_file, 
-                    caption="فەرموو، ڤیدیۆیا تە ئامادەیە ✨\nBy: Tech Ai"
-                )
+                await update.message.reply_video(video=video_file, caption="فەرموو، ڤیدیۆیا تە ئامادەیە ✨\nBy: Tech Ai")
             await status_msg.delete()
-        except Exception as e:
-            await update.message.reply_text("ببورە، کێشەیەک لە ناردنی ڤیدیۆکە دروست بوو.")
-            logging.error(f"Send Error: {e}")
+        except:
+            await update.message.reply_text("ببورە، کێشەیەک هەبوو د فڕێکرنا ڤیدیۆیێ دا.")
         
         if os.path.exists(video_path): os.remove(video_path)
     else:
-        await update.message.reply_text("ببورە، من نەشیا ڤێ ڤیدیۆیێ داونلود بکەم. دڵنیابە کە لینکەکە دروستە و ڤیدیۆکە گشتییە (Public).")
+        await update.message.reply_text("ببورە، من نەشیا ڤێ ڤیدیۆیێ داونلود بکەم.")
 
 def main():
     app = Application.builder().token(TOKEN).build()
